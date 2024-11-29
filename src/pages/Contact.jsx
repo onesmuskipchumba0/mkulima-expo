@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import emailjs from '@emailjs/browser';
 
 export default function Contact() {
+  const form = useRef();
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -8,11 +12,41 @@ export default function Contact() {
     message: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Open email client with pre-filled data
-    const mailtoLink = `mailto:onesmuskipchumba5@gmail.com?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`)}`;
-    window.location.href = mailtoLink;
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const result = await emailjs.sendForm(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        form.current,
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY // Replace with your EmailJS public key
+      );
+
+      if (result.text === 'OK') {
+        setMessage({
+          type: 'success',
+          text: 'Message sent successfully! We will get back to you soon.'
+        });
+        // Clear form
+        setFormData({
+          name: '',
+          email: '',
+          subject: '',
+          message: ''
+        });
+      }
+    } catch (error) {
+      console.error('Email send error:', error);
+      setMessage({
+        type: 'error',
+        text: 'Failed to send message. Please try again or contact directly via email.'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -78,7 +112,12 @@ export default function Contact() {
 
         <div className="bg-base-200 p-6 rounded-lg">
           <h2 className="text-2xl font-semibold mb-4">Send a Message</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {message.text && (
+            <div className={`alert ${message.type === 'success' ? 'alert-success' : 'alert-error'} mb-4`}>
+              <span>{message.text}</span>
+            </div>
+          )}
+          <form ref={form} onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="label">
                 <span className="label-text">Name</span>
@@ -130,8 +169,12 @@ export default function Contact() {
                 required
               ></textarea>
             </div>
-            <button type="submit" className="btn btn-primary w-full">
-              Send Message
+            <button 
+              type="submit" 
+              className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}
+              disabled={loading}
+            >
+              {loading ? 'Sending...' : 'Send Message'}
             </button>
           </form>
         </div>
