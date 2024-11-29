@@ -384,6 +384,12 @@ export default function Marketplace() {
 
                   {user ? (
                     <div className="card-actions justify-end mt-4 gap-2">
+                      <Link
+                        to={`/marketplace/${listing.id}`}
+                        className="btn btn-secondary gap-2"
+                      >
+                        View Details
+                      </Link>
                       <a
                         href={`tel:${listing.profiles?.phone_number}`}
                         className="btn btn-primary gap-2"

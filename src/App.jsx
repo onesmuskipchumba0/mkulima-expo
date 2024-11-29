@@ -9,6 +9,7 @@ import ForBuyers from './pages/ForBuyers'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import Profile from './pages/Profile'
+import ProductDetails from './pages/ProductDetails'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/marketplace/:id" element={<ProductDetails />} />
               <Route path="/for-farmers" element={<ForFarmers />} />
               <Route path="/for-buyers" element={<ForBuyers />} />
               <Route path="/signin" element={<SignIn />} />
