@@ -10,7 +10,7 @@ export default function ForFarmers() {
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', content: '' })
-  const [myListings, setMyListings] = useState([])
+  const [listings, setListings] = useState([])
   const [showListingForm, setShowListingForm] = useState(false)
   const [userProfile, setUserProfile] = useState(null)
   const [editingListing, setEditingListing] = useState(null)
@@ -52,6 +52,7 @@ export default function ForFarmers() {
   useEffect(() => {
     if (user) {
       fetchUserProfile()
+      fetchListings()
     }
   }, [user])
 
@@ -67,7 +68,7 @@ export default function ForFarmers() {
 
       setUserProfile(profile)
       if (profile.user_type === 'farmer') {
-        fetchMyListings()
+        // fetchMyListings()
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -77,15 +78,8 @@ export default function ForFarmers() {
     }
   }
 
-  const clearMessage = useCallback(() => {
-    setTimeout(() => {
-      setMessage({ type: '', content: '' })
-    }, 5000)
-  }, [])
-
-  const fetchMyListings = async () => {
+  const fetchListings = async () => {
     try {
-      setLoading(true)
       const { data, error } = await supabase
         .from('product_listings')
         .select('*')
@@ -93,50 +87,56 @@ export default function ForFarmers() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setMyListings(data || [])
+      console.log('Farmer listings:', data)
+      setListings(data || [])
     } catch (error) {
       console.error('Error:', error)
-      setMessage({ type: 'error', content: error.message })
-      clearMessage()
-    } finally {
-      setLoading(false)
     }
   }
+
+  const handleMessageDisplay = useCallback((content, type = 'success') => {
+    setMessage({ content, type })
+    setTimeout(() => setMessage({ type: '', content: '' }), 5000)
+  }, [])
+
+  const clearMessage = useCallback(() => {
+    setMessage({ type: '', content: '' })
+  }, [])
 
   const resetForm = () => {
     setNewListing(initialFormState)
   }
 
   const validateForm = () => {
+    const errors = [];
+    
     if (!newListing.title.trim()) {
-      setMessage({ type: 'error', content: 'Please enter a product title' })
-      return false
+      errors.push('Please enter a product title');
     }
     if (!newListing.category) {
-      setMessage({ type: 'error', content: 'Please select a category' })
-      return false
+      errors.push('Please select a category');
     }
-    if (!newListing.quantity || newListing.quantity <= 0) {
-      setMessage({ type: 'error', content: 'Please enter a valid quantity' })
-      return false
+    if (!newListing.quantity || isNaN(newListing.quantity) || parseFloat(newListing.quantity) <= 0) {
+      errors.push('Please enter a valid quantity');
     }
     if (!newListing.unit) {
-      setMessage({ type: 'error', content: 'Please select a unit' })
-      return false
+      errors.push('Please select a unit');
     }
-    if (!newListing.price_per_unit || newListing.price_per_unit <= 0) {
-      setMessage({ type: 'error', content: 'Please enter a valid price' })
-      return false
+    if (!newListing.price_per_unit || isNaN(newListing.price_per_unit) || parseFloat(newListing.price_per_unit) <= 0) {
+      errors.push('Please enter a valid price');
     }
     if (!newListing.location.trim()) {
-      setMessage({ type: 'error', content: 'Please enter a location' })
-      return false
+      errors.push('Please enter a location');
     }
     if (!newListing.description.trim()) {
-      setMessage({ type: 'error', content: 'Please enter a description' })
-      return false
+      errors.push('Please enter a description');
     }
-    return true
+    
+    if (errors.length > 0) {
+      handleMessageDisplay(errors.join('\n'), 'error');
+      return false;
+    }
+    return true;
   }
 
   const handleDelete = async (listingId) => {
@@ -156,7 +156,7 @@ export default function ForFarmers() {
 
       setMessage({ type: 'success', content: 'Listing deleted successfully!' })
       clearMessage()
-      fetchMyListings()
+      fetchListings()
     } catch (error) {
       console.error('Error:', error)
       setMessage({ type: 'error', content: error.message })
@@ -185,7 +185,6 @@ export default function ForFarmers() {
     e.preventDefault()
 
     if (!validateForm()) {
-      clearMessage()
       return
     }
 
@@ -200,41 +199,38 @@ export default function ForFarmers() {
         status: 'available'
       }
 
-      let error
+      let result;
       
       if (editingListing) {
-        // Update existing listing
-        const { error: updateError } = await supabase
+        result = await supabase
           .from('product_listings')
           .update(listingData)
           .eq('id', editingListing.id)
-          .eq('farmer_id', user.id) // Security check
-        error = updateError
+          .eq('farmer_id', user.id)
       } else {
-        // Create new listing
-        const { error: insertError } = await supabase
+        result = await supabase
           .from('product_listings')
           .insert([listingData])
-        error = insertError
       }
 
-      if (error) throw error
+      if (result.error) {
+        throw result.error
+      }
 
-      setMessage({ 
-        type: 'success', 
-        content: editingListing 
+      handleMessageDisplay(
+        editingListing 
           ? 'Listing updated successfully!' 
-          : 'Product listed successfully!' 
-      })
-      clearMessage()
+          : 'Product listed successfully!',
+        'success'
+      )
+      
       setShowListingForm(false)
       setEditingListing(null)
       resetForm()
-      fetchMyListings()
+      await fetchListings()
     } catch (error) {
       console.error('Error:', error)
-      setMessage({ type: 'error', content: error.message })
-      clearMessage()
+      handleMessageDisplay(error.message || 'An error occurred while saving the listing', 'error')
     } finally {
       setFormLoading(false)
     }
@@ -251,11 +247,6 @@ export default function ForFarmers() {
   const handleFormClose = () => {
     setShowListingForm(false)
     setEditingListing(null)
-  }
-
-  const handleMessageDisplay = (content, type = 'success') => {
-    setMessage({ content, type })
-    setTimeout(() => setMessage({ content: '', type: 'success' }), 5000)
   }
 
   if (loading) {
@@ -346,7 +337,7 @@ export default function ForFarmers() {
         )}
 
         <div className="space-y-4">
-          {myListings.map(listing => (
+          {listings.map(listing => (
             <div key={listing.id} className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <div className="flex justify-between items-start">
@@ -410,7 +401,7 @@ export default function ForFarmers() {
               </div>
             </div>
           ))}
-          {myListings.length === 0 && (
+          {listings.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500">No listings yet. Create your first listing!</p>
             </div>

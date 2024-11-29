@@ -83,7 +83,9 @@ export default function ListingForm({
         farmer_id: userId,
         quantity: parseFloat(formData.quantity),
         price_per_unit: parseFloat(formData.price_per_unit),
-        status: 'available'
+        status: 'available',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
 
       let error
@@ -91,7 +93,10 @@ export default function ListingForm({
       if (editingListing) {
         const { error: updateError } = await supabase
           .from('product_listings')
-          .update(listingData)
+          .update({
+            ...listingData,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', editingListing.id)
           .eq('farmer_id', userId)
         error = updateError
