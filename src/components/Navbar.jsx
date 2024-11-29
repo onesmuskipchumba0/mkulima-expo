@@ -4,8 +4,12 @@ import { useAuth } from '../context/AuthContext'
 export default function Navbar() {
   const { user, signOut } = useAuth()
 
-  const activeClassName = "bg-primary-focus text-white font-semibold"
-  const inactiveClassName = "hover:bg-primary-focus/50 transition-colors duration-200"
+  const navLinkClasses = ({ isActive }) => 
+    `px-4 py-2 rounded-lg transition-all duration-200 ${
+      isActive 
+        ? 'bg-white text-primary font-bold' 
+        : 'text-white hover:bg-primary-focus'
+    }`
 
   return (
     <div className="navbar bg-primary text-primary-content shadow-lg sticky top-0 z-50">
@@ -20,9 +24,7 @@ export default function Navbar() {
             <li>
               <NavLink 
                 to="/marketplace" 
-                className={({ isActive }) => 
-                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
-                }
+                className={navLinkClasses}
               >
                 Marketplace
               </NavLink>
@@ -30,9 +32,7 @@ export default function Navbar() {
             <li>
               <NavLink 
                 to="/for-farmers" 
-                className={({ isActive }) => 
-                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
-                }
+                className={navLinkClasses}
               >
                 For Farmers
               </NavLink>
@@ -40,9 +40,7 @@ export default function Navbar() {
             <li>
               <NavLink 
                 to="/for-buyers" 
-                className={({ isActive }) => 
-                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
-                }
+                className={navLinkClasses}
               >
                 For Buyers
               </NavLink>
@@ -50,9 +48,7 @@ export default function Navbar() {
             <li>
               <NavLink 
                 to="/about" 
-                className={({ isActive }) => 
-                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
-                }
+                className={navLinkClasses}
               >
                 About
               </NavLink>
@@ -60,25 +56,21 @@ export default function Navbar() {
             <li>
               <NavLink 
                 to="/contact" 
-                className={({ isActive }) => 
-                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
-                }
+                className={navLinkClasses}
               >
                 Contact
               </NavLink>
             </li>
           </ul>
         </div>
-        <Link to="/" className="btn btn-ghost normal-case text-xl">🌾 MkulimaExpo</Link>
+        <Link to="/" className="btn btn-ghost normal-case text-xl text-white">🌾 MkulimaExpo</Link>
       </div>
       <div className="navbar-center hidden lg:flex">
-        <ul className="menu menu-horizontal px-1">
+        <ul className="flex gap-2 px-1">
           <li>
             <NavLink 
               to="/marketplace" 
-              className={({ isActive }) => 
-                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
-              }
+              className={navLinkClasses}
             >
               Marketplace
             </NavLink>
@@ -86,9 +78,7 @@ export default function Navbar() {
           <li>
             <NavLink 
               to="/for-farmers" 
-              className={({ isActive }) => 
-                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
-              }
+              className={navLinkClasses}
             >
               For Farmers
             </NavLink>
@@ -96,9 +86,7 @@ export default function Navbar() {
           <li>
             <NavLink 
               to="/for-buyers" 
-              className={({ isActive }) => 
-                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
-              }
+              className={navLinkClasses}
             >
               For Buyers
             </NavLink>
@@ -106,9 +94,7 @@ export default function Navbar() {
           <li>
             <NavLink 
               to="/about" 
-              className={({ isActive }) => 
-                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
-              }
+              className={navLinkClasses}
             >
               About
             </NavLink>
@@ -116,9 +102,7 @@ export default function Navbar() {
           <li>
             <NavLink 
               to="/contact" 
-              className={({ isActive }) => 
-                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
-              }
+              className={navLinkClasses}
             >
               Contact
             </NavLink>
@@ -151,7 +135,7 @@ export default function Navbar() {
           </div>
         ) : (
           <>
-            <Link to="/signin" className="btn btn-ghost">Sign In</Link>
+            <Link to="/signin" className="btn btn-ghost text-white">Sign In</Link>
             <Link to="/signup" className="btn bg-secondary hover:bg-secondary-focus text-white">Get Started</Link>
           </>
         )}
