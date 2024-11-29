@@ -47,6 +47,26 @@ export default function Navbar() {
                 For Buyers
               </NavLink>
             </li>
+            <li>
+              <NavLink 
+                to="/about" 
+                className={({ isActive }) => 
+                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
+                }
+              >
+                About
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/contact" 
+                className={({ isActive }) => 
+                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
+                }
+              >
+                Contact
+              </NavLink>
+            </li>
           </ul>
         </div>
         <Link to="/" className="btn btn-ghost normal-case text-xl">🌾 MkulimaExpo</Link>
@@ -81,6 +101,26 @@ export default function Navbar() {
               }
             >
               For Buyers
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/about" 
+              className={({ isActive }) => 
+                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
+              }
+            >
+              About
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/contact" 
+              className={({ isActive }) => 
+                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
+              }
+            >
+              Contact
             </NavLink>
           </li>
         </ul>
