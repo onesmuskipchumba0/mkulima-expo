@@ -1,8 +1,11 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
   const { user, signOut } = useAuth()
+
+  const activeClassName = "bg-primary-focus text-white font-semibold"
+  const inactiveClassName = "hover:bg-primary-focus/50 transition-colors duration-200"
 
   return (
     <div className="navbar bg-primary text-primary-content shadow-lg sticky top-0 z-50">
@@ -14,18 +17,72 @@ export default function Navbar() {
             </svg>
           </label>
           <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-            <li><Link to="/marketplace">Marketplace</Link></li>
-            <li><Link to="/for-farmers">For Farmers</Link></li>
-            <li><Link to="/for-buyers">For Buyers</Link></li>
+            <li>
+              <NavLink 
+                to="/marketplace" 
+                className={({ isActive }) => 
+                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
+                }
+              >
+                Marketplace
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/for-farmers" 
+                className={({ isActive }) => 
+                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
+                }
+              >
+                For Farmers
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/for-buyers" 
+                className={({ isActive }) => 
+                  isActive ? "text-primary font-semibold bg-base-200" : "hover:bg-base-200"
+                }
+              >
+                For Buyers
+              </NavLink>
+            </li>
           </ul>
         </div>
         <Link to="/" className="btn btn-ghost normal-case text-xl">🌾 MkulimaExpo</Link>
       </div>
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal px-1">
-          <li><Link to="/marketplace">Marketplace</Link></li>
-          <li><Link to="/for-farmers">For Farmers</Link></li>
-          <li><Link to="/for-buyers">For Buyers</Link></li>
+          <li>
+            <NavLink 
+              to="/marketplace" 
+              className={({ isActive }) => 
+                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
+              }
+            >
+              Marketplace
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/for-farmers" 
+              className={({ isActive }) => 
+                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
+              }
+            >
+              For Farmers
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/for-buyers" 
+              className={({ isActive }) => 
+                `rounded-lg ${isActive ? activeClassName : inactiveClassName}`
+              }
+            >
+              For Buyers
+            </NavLink>
+          </li>
         </ul>
       </div>
       <div className="navbar-end">
@@ -39,7 +96,16 @@ export default function Navbar() {
               </div>
             </label>
             <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-              <li><Link to="/profile" className="text-primary font-bold">Profile</Link></li>
+              <li>
+                <NavLink 
+                  to="/profile" 
+                  className={({ isActive }) => 
+                    `${isActive ? "bg-base-200" : ""} text-primary font-bold`
+                  }
+                >
+                  Profile
+                </NavLink>
+              </li>
               <li><button onClick={signOut} className="text-primary font-bold">Sign Out</button></li>
             </ul>
           </div>
