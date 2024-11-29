@@ -39,6 +39,7 @@ export default function ListingForm({
       price_per_unit: editingListing.price_per_unit.toString(),
       location: editingListing.location,
       availability_date: editingListing.availability_date,
+      images: []
     } : {
       title: '',
       description: '',
@@ -48,6 +49,7 @@ export default function ListingForm({
       price_per_unit: '',
       location: '',
       availability_date: new Date().toISOString().split('T')[0],
+      images: []
     }
   )
 
@@ -56,6 +58,27 @@ export default function ListingForm({
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }))
+  }
+
+  const handleImageChange = async (e) => {
+    const files = Array.from(e.target.files)
+    
+    // Validate file types and sizes
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        onSuccess(`${file.name} is not an image file`, 'error')
+        return
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        onSuccess(`${file.name} is too large (max 5MB)`, 'error')
+        return
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      images: files
     }))
   }
 
@@ -78,15 +101,50 @@ export default function ListingForm({
     try {
       setFormLoading(true)
       
+      // Upload images first if any
+      const uploadedImageUrls = []
+      if (formData.images && formData.images.length > 0) {
+        for (const file of formData.images) {
+          try {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${Math.random()}.${fileExt}`
+            const filePath = `${userId}/${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+              .from('product-images')
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+              })
+
+            if (uploadError) throw uploadError
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+              .from('product-images')
+              .getPublicUrl(filePath)
+
+            uploadedImageUrls.push(publicUrl)
+          } catch (uploadError) {
+            console.error('Error uploading file:', uploadError)
+            throw new Error(`Failed to upload image: ${uploadError.message}`)
+          }
+        }
+      }
+
       const listingData = {
         ...formData,
         farmer_id: userId,
+        images: uploadedImageUrls,
         quantity: parseFloat(formData.quantity),
         price_per_unit: parseFloat(formData.price_per_unit),
         status: 'available',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
+
+      // Remove the file objects before sending to database
+      delete listingData.imageFiles
 
       let error
 
@@ -252,6 +310,43 @@ export default function ListingForm({
               onChange={handleChange}
               required
             ></textarea>
+          </div>
+
+          <div className="form-control col-span-2">
+            <label className="label">
+              <span className="label-text">Product Images</span>
+              <span className="label-text-alt text-gray-500">(Max 5MB per image)</span>
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
+              className="file-input file-input-bordered w-full"
+            />
+            {formData.images?.length > 0 && (
+              <div className="mt-2 flex gap-2 overflow-x-auto p-2">
+                {Array.from(formData.images).map((file, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={`Preview ${index + 1}`}
+                      className="h-20 w-20 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newImages = Array.from(formData.images).filter((_, i) => i !== index)
+                        setFormData(prev => ({ ...prev, images: newImages }))
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

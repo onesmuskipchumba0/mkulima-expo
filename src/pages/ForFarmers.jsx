@@ -24,6 +24,7 @@ export default function ForFarmers() {
     price_per_unit: '',
     location: '',
     availability_date: new Date().toISOString().split('T')[0],
+    images: []
   }
   const [newListing, setNewListing] = useState(initialFormState)
 
@@ -236,6 +237,27 @@ export default function ForFarmers() {
     }
   }
 
+  const handleImageChange = async (e) => {
+    const files = Array.from(e.target.files)
+    
+    // Validate file types and sizes
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        setMessage({ type: 'error', content: `${file.name} is not an image file` })
+        return
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setMessage({ type: 'error', content: `${file.name} is too large (max 5MB)` })
+        return
+      }
+    }
+
+    setNewListing(prev => ({
+      ...prev,
+      images: files
+    }))
+  }
+
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target
     setNewListing(prev => ({
@@ -247,6 +269,87 @@ export default function ForFarmers() {
   const handleFormClose = () => {
     setShowListingForm(false)
     setEditingListing(null)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setFormLoading(true)
+    setMessage({ type: '', content: '' })
+
+    try {
+      if (!user) throw new Error('You must be logged in to create a listing')
+
+      // Upload images first if any
+      const uploadedImageUrls = []
+      if (newListing.images && newListing.images.length > 0) {
+        for (const file of newListing.images) {
+          try {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${Math.random()}.${fileExt}`
+            const filePath = `${user.id}/${fileName}`
+
+            console.log('Uploading file:', filePath)
+
+            const { error: uploadError, data } = await supabase.storage
+              .from('product-images')
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+              })
+
+            if (uploadError) {
+              console.error('Upload error:', uploadError)
+              throw uploadError
+            }
+
+            console.log('Upload successful:', data)
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+              .from('product-images')
+              .getPublicUrl(filePath)
+
+            console.log('Public URL:', publicUrl)
+            uploadedImageUrls.push(publicUrl)
+          } catch (uploadError) {
+            console.error('Error uploading file:', uploadError)
+            throw new Error(`Failed to upload image: ${uploadError.message}`)
+          }
+        }
+      }
+
+      const listingData = {
+        ...newListing,
+        farmer_id: user.id,
+        images: uploadedImageUrls,
+        quantity: parseFloat(newListing.quantity),
+        price_per_unit: parseFloat(newListing.price_per_unit)
+      }
+
+      // Remove the file objects before sending to database
+      delete listingData.imageFiles
+
+      console.log('Saving listing data:', listingData)
+
+      const { error: dbError } = await supabase
+        .from('product_listings')
+        .insert([listingData])
+
+      if (dbError) {
+        console.error('Database error:', dbError)
+        throw dbError
+      }
+
+      setMessage({ type: 'success', content: 'Listing created successfully!' })
+      setNewListing(initialFormState)
+      setShowListingForm(false)
+      fetchListings()
+    } catch (error) {
+      console.error('Error:', error)
+      setMessage({ type: 'error', content: error.message })
+    } finally {
+      setFormLoading(false)
+    }
   }
 
   if (loading) {
@@ -314,7 +417,7 @@ export default function ForFarmers() {
           <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'} mb-4`}>
             <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
               {message.type === 'error' ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               ) : (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               )}
@@ -333,13 +436,118 @@ export default function ForFarmers() {
             handleInputChange={handleInputChange}
             newListing={newListing}
             formLoading={formLoading}
-          />
+          >
+            {/* Form fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Title */}
+              <div className="form-control w-full">
+                <label className="label">
+                  <span className="label-text">Product Title</span>
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={newListing.title}
+                  onChange={handleInputChange}
+                  placeholder="Enter product title"
+                  className="input input-bordered w-full"
+                />
+              </div>
+              {/* Description */}
+              <div className="form-control w-full">
+                <label className="label">
+                  <span className="label-text">Product Description</span>
+                </label>
+                <textarea
+                  name="description"
+                  value={newListing.description}
+                  onChange={handleInputChange}
+                  placeholder="Enter product description"
+                  className="textarea textarea-bordered w-full"
+                />
+              </div>
+            </div>
+
+            {/* Image Upload Field */}
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text">Product Images</span>
+                <span className="label-text-alt text-gray-500">(You can select multiple images)</span>
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageChange}
+                className="file-input file-input-bordered w-full"
+              />
+              {newListing.images?.length > 0 && (
+                <div className="mt-2 flex gap-2 overflow-x-auto p-2">
+                  {Array.from(newListing.images).map((file, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Preview ${index + 1}`}
+                        className="h-20 w-20 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newImages = Array.from(newListing.images).filter((_, i) => i !== index)
+                          setNewListing(prev => ({ ...prev, images: newImages }))
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-4 mt-6">
+              <button
+                type="button"
+                onClick={handleFormClose}
+                className="btn btn-ghost"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={formLoading}
+              >
+                {formLoading ? (
+                  <div className="loading loading-spinner loading-sm"></div>
+                ) : (
+                  editingListing ? 'Update Listing' : 'Create Listing'
+                )}
+              </button>
+            </div>
+          </ListingForm>
         )}
 
         <div className="space-y-4">
           {listings.map(listing => (
             <div key={listing.id} className="card bg-base-100 shadow-xl">
               <div className="card-body">
+                {/* Product Image Gallery */}
+                {listing.images && listing.images.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {listing.images.map((imageUrl, index) => (
+                      <div key={index} className="relative flex-none">
+                        <img
+                          src={imageUrl}
+                          alt={`${listing.title} - Image ${index + 1}`}
+                          className="h-32 w-32 object-cover rounded-lg"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
                 <div className="flex justify-between items-start">
                   <div>
                     <h2 className="card-title">{listing.title}</h2>

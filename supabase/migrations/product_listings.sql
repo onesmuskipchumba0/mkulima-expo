@@ -1,6 +1,6 @@
 -- Create a table for product listings
 create table if not exists public.product_listings (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default uuid_generate_v4(),
   farmer_id uuid,
   title text not null,
   description text,
@@ -8,12 +8,13 @@ create table if not exists public.product_listings (
   quantity numeric not null,
   unit text not null,
   price_per_unit numeric not null,
-  location text not null,
-  availability_date date not null,
+  location text,
+  availability_date date,
   status text default 'available' check (status in ('available', 'sold', 'expired')),
-  images text[],
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  images text[] default array[]::text[],
+  primary key (id)
 );
 
 -- Enable Row Level Security

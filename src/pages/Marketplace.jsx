@@ -305,6 +305,21 @@ export default function Marketplace() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {listings.map(listing => (
               <div key={listing.id} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+                {/* Product Image */}
+                {listing.images && listing.images.length > 0 && (
+                  <figure className="relative pt-[56.25%]">
+                    <img
+                      src={listing.images[0]}
+                      alt={listing.title}
+                      className="absolute top-0 left-0 w-full h-full object-cover"
+                    />
+                    {listing.images.length > 1 && (
+                      <div className="absolute bottom-2 right-2 bg-base-100 bg-opacity-75 px-2 py-1 rounded-full text-sm">
+                        +{listing.images.length - 1} more
+                      </div>
+                    )}
+                  </figure>
+                )}
                 <div className="card-body">
                   <h2 className="card-title text-xl font-bold">{listing.title}</h2>
                   
