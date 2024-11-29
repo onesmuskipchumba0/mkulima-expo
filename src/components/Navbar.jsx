@@ -7,7 +7,7 @@ export default function Navbar() {
   const navLinkClasses = ({ isActive }) => 
     `px-4 py-2 rounded-lg transition-all duration-200 ${
       isActive 
-        ? 'bg-white text-primary font-bold' 
+        ? 'bg-white text-green-500 font-bold' 
         : 'text-white hover:bg-primary-focus'
     }`
 
@@ -110,9 +110,7 @@ export default function Navbar() {
           <li>
             <NavLink 
               to="/contact" 
-              className={({ isActive }) =>
-                isActive ? 'text-primary font-bold' : 'text-white hover:text-primary'
-              }
+              className={navLinkClasses}
             >
               Contact
             </NavLink>
@@ -120,9 +118,7 @@ export default function Navbar() {
           <li>
             <NavLink 
               to="/pricing" 
-              className={({ isActive }) =>
-                isActive ? 'text-primary font-bold' : 'text-white hover:text-primary'
-              }
+              className={navLinkClasses}
             >
               Pricing
             </NavLink>
@@ -143,9 +139,7 @@ export default function Navbar() {
               <li>
                 <NavLink 
                   to="/profile" 
-                  className={({ isActive }) => 
-                    `${isActive ? "bg-base-200" : ""} text-primary font-bold`
-                  }
+                  className={navLinkClasses}
                 >
                   Profile
                 </NavLink>
