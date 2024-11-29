@@ -416,7 +416,7 @@ export default function Marketplace() {
                     </div>
                   ) : (
                     <div className="card-actions justify-end mt-4">
-                      <Link to="/login" className="btn btn-outline btn-primary">
+                      <Link to="/signin" className="btn btn-outline btn-primary">
                         Login to Contact Farmer
                       </Link>
                     </div>
