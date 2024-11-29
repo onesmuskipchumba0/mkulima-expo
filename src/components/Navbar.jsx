@@ -61,6 +61,14 @@ export default function Navbar() {
                 Contact
               </NavLink>
             </li>
+            <li>
+              <NavLink 
+                to="/pricing" 
+                className={navLinkClasses}
+              >
+                Pricing
+              </NavLink>
+            </li>
           </ul>
         </div>
         <Link to="/" className="btn btn-ghost normal-case text-xl text-white">🌾 MkulimaExpo</Link>
@@ -102,9 +110,21 @@ export default function Navbar() {
           <li>
             <NavLink 
               to="/contact" 
-              className={navLinkClasses}
+              className={({ isActive }) =>
+                isActive ? 'text-primary font-bold' : 'text-white hover:text-primary'
+              }
             >
               Contact
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/pricing" 
+              className={({ isActive }) =>
+                isActive ? 'text-primary font-bold' : 'text-white hover:text-primary'
+              }
+            >
+              Pricing
             </NavLink>
           </li>
         </ul>

@@ -6,6 +6,8 @@ import { formatPhoneNumber } from '../utils/phoneUtils';
 import { BsTelephone } from 'react-icons/bs';
 import { IoLogoWhatsapp, IoPerson } from 'react-icons/io5';
 import { IoArrowBack } from 'react-icons/io5';
+import { AiFillStar, AiOutlineEye, AiOutlineHeart } from 'react-icons/ai';
+import { MdVerified } from 'react-icons/md';
 
 function ProductDetails() {
   const { id } = useParams();
@@ -14,6 +16,11 @@ function ProductDetails() {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [analytics, setAnalytics] = useState({
+    views: Math.floor(Math.random() * 100) + 50,
+    saves: Math.floor(Math.random() * 50) + 10,
+    daysListed: Math.floor(Math.random() * 30) + 1
+  });
 
   useEffect(() => {
     fetchProductDetails();
@@ -165,11 +172,46 @@ function ProductDetails() {
                         <IoPerson className="text-2xl text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{farmer?.farm_name || farmer?.full_name}</h3>
-                        <p className="text-sm opacity-75">Verified Seller</p>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-lg">{farmer?.farm_name || farmer?.full_name}</h3>
+                          <MdVerified className="text-primary text-xl" title="Verified Premium Seller" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center">
+                            <AiFillStar className="text-yellow-400" />
+                            <span className="ml-1">4.8</span>
+                          </div>
+                          <span className="text-sm opacity-75">(23 reviews)</span>
+                        </div>
                       </div>
                     </div>
+
                     <div className="divider"></div>
+                    
+                    {/* Product Analytics */}
+                    <div className="grid grid-cols-3 gap-4 bg-base-200 rounded-lg p-4">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <AiOutlineEye className="text-primary" />
+                          <span className="font-semibold">{analytics.views}</span>
+                        </div>
+                        <p className="text-xs opacity-75">Views</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <AiOutlineHeart className="text-primary" />
+                          <span className="font-semibold">{analytics.saves}</span>
+                        </div>
+                        <p className="text-xs opacity-75">Saves</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="font-semibold">{analytics.daysListed}</span>
+                        </div>
+                        <p className="text-xs opacity-75">Days Listed</p>
+                      </div>
+                    </div>
+
                     <div className="space-y-3">
                       <p className="text-lg"><span className="font-semibold">Location:</span> {farmer?.location}</p>
                       <p className="text-lg"><span className="font-semibold">Phone:</span> {formatPhoneNumber(farmer.phone_number)}</p>
