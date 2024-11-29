@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
+import { formatPhoneNumber } from '../utils/phoneUtils';
 
 function ProductDetails() {
   const { id } = useParams();
@@ -153,7 +154,7 @@ function ProductDetails() {
                     {farmer?.phone_number && (
                       <p>
                         <span className="font-semibold">Phone:</span>{' '}
-                        {farmer.phone_number}
+                        {formatPhoneNumber(farmer.phone_number)}
                       </p>
                     )}
                   </div>
@@ -202,7 +203,7 @@ function ProductDetails() {
               <div className="flex gap-4">
                 {farmer?.phone_number && (
                   <a
-                    href={`tel:${farmer.phone_number}`}
+                    href={`tel:${formatPhoneNumber(farmer.phone_number)}`}
                     className="btn btn-primary flex-1"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
@@ -211,7 +212,7 @@ function ProductDetails() {
                 )}
                 {farmer?.phone_number && (
                   <a
-                    href={`https://wa.me/${farmer.phone_number.replace(/[^0-9]/g, '')}`}
+                    href={`https://wa.me/${formatPhoneNumber(farmer.phone_number).replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-success flex-1 text-white font-semibold"

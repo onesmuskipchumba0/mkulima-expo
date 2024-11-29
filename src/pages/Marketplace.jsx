@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../config/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Link } from 'react-router-dom'
+import { formatPhoneNumber } from '../utils/phoneUtils'
 
 export default function Marketplace() {
   const { user } = useAuth()
@@ -384,9 +385,8 @@ export default function Marketplace() {
 
                   {user ? (
                     <div className="card-actions justify-center mt-4 gap-2">
-           
                       <a
-                        href={`tel:${listing.profiles?.phone_number}`}
+                        href={`tel:${formatPhoneNumber(listing.profiles?.phone_number)}`}
                         className="btn btn-primary gap-2"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -396,7 +396,7 @@ export default function Marketplace() {
                       </a>
                       {listing.profiles?.phone_number && (
                         <a
-                          href={`https://wa.me/${listing.profiles.phone_number.replace(/[^0-9]/g, '')}`}
+                          href={`https://wa.me/${formatPhoneNumber(listing.profiles.phone_number).replace(/\D/g, '')}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-success gap-2"
@@ -406,9 +406,8 @@ export default function Marketplace() {
                           </svg>
                           WhatsApp
                         </a>
-                        
                       )}
-                          <Link
+                      <Link
                         to={`/marketplace/${listing.id}`}
                         className="btn btn-secondary gap-2"
                       >
