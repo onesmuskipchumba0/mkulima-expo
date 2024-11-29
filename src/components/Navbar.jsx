@@ -39,8 +39,8 @@ export default function Navbar() {
               </div>
             </label>
             <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-              <li><Link to="/profile">Profile</Link></li>
-              <li><button onClick={signOut}>Sign Out</button></li>
+              <li><Link to="/profile" className="text-primary font-bold">Profile</Link></li>
+              <li><button onClick={signOut} className="text-primary font-bold">Sign Out</button></li>
             </ul>
           </div>
         ) : (
