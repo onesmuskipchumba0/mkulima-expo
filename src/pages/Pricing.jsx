@@ -45,10 +45,11 @@ function Pricing() {
       name: 'Basic',
       price: '0',
       features: [
-        'Basic product listings',
-        'Contact via phone',
-        'Basic product details',
-        'Standard support'
+        'List up to 5 products',
+        'Basic product photos',
+        'Phone contact with buyers',
+        'Standard visibility in marketplace',
+        'Basic product analytics'
       ],
       buttonText: currentPlan === 'Basic' ? 'Current Plan' : 'Choose Basic',
       recommended: false
@@ -57,11 +58,14 @@ function Pricing() {
       name: 'Premium',
       price: '999',
       features: [
-        'Verified seller badge',
-        'Product analytics',
-        'Multiple product images',
-        'Featured listings',
-        'Priority support'
+        'Verified Seller Badge (2x more trust)',
+        'Unlimited product listings',
+        'Featured listings (5x more views)',
+        'Up to 10 photos per product',
+        'Advanced analytics & insights',
+        'Priority placement in search',
+        'Direct WhatsApp integration',
+        'Premium customer support'
       ],
       buttonText: currentPlan === 'Premium' ? 'Current Plan' : 'Upgrade Now',
       recommended: true
@@ -70,12 +74,15 @@ function Pricing() {
       name: 'Business',
       price: '2499',
       features: [
-        'All Premium features',
-        'In-app messaging',
-        'Market insights',
-        'Bulk listings',
-        'API access',
-        'Dedicated support'
+        'All Premium features included',
+        'Bulk product upload (save hours)',
+        'Market price alerts & trends',
+        'Competitor price tracking',
+        'Seasonal demand forecasts',
+        'Custom branding options',
+        'Dedicated account manager',
+        'Priority support 24/7',
+        'API access for automation'
       ],
       buttonText: currentPlan === 'Business' ? 'Current Plan' : 'Get Business',
       recommended: false
