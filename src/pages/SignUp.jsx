@@ -30,13 +30,16 @@ export default function SignUp() {
         password: formData.password,
         options: {
           data: {
-            user_type: formData.userType,
+            user_type: formData.userType
           }
         }
       })
       if (error) throw error
+      // Show success message and redirect
+      alert('Please check your email for verification link')
       navigate('/signin')
     } catch (error) {
+      console.error('Error:', error)
       setError(error.message)
     } finally {
       setLoading(false)
