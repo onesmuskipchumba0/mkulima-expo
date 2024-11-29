@@ -311,8 +311,8 @@ export default function Marketplace() {
                   {/* Farmer Information */}
                   <div className="bg-base-200 rounded-lg p-4 mt-2">
                     <div className="flex items-center gap-2">
-                      <div className="avatar">
-                        <div className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center text-lg font-semibold">
+                      <div className="avatar text-center self-center flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-primary text-primary-content text-3xl font-semibold">
                           {listing.profiles?.full_name?.[0] || 'A'}
                         </div>
                       </div>
