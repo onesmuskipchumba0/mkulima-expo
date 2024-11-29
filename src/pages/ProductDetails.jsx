@@ -4,7 +4,8 @@ import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
 import { formatPhoneNumber } from '../utils/phoneUtils';
 import { BsTelephone } from 'react-icons/bs';
-import { IoLogoWhatsapp } from 'react-icons/io5';
+import { IoLogoWhatsapp, IoPerson } from 'react-icons/io5';
+import { IoArrowBack } from 'react-icons/io5';
 
 function ProductDetails() {
   const { id } = useParams();
@@ -113,6 +114,15 @@ function ProductDetails() {
     <div className="min-h-screen bg-base-100">
       <div className="py-8 bg-base-100">
         <div className="max-w-6xl mx-auto px-4">
+          <div className="mb-6">
+            <Link 
+              to="/marketplace" 
+              className="btn btn-ghost gap-2 hover:-translate-x-1 transition-transform"
+            >
+              <IoArrowBack className="text-xl" />
+              Back to Marketplace
+            </Link>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Product Image and Details */}
             <div className="space-y-6">
@@ -152,7 +162,7 @@ function ProductDetails() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                        <span className="text-2xl text-primary-content">👤</span>
+                        <IoPerson className="text-2xl text-white" />
                       </div>
                       <div>
                         <h3 className="font-semibold text-lg">{farmer?.farm_name || farmer?.full_name}</h3>
