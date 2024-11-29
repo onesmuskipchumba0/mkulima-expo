@@ -1,15 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../config/supabase'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import ListingForm from '../components/ListingForm'
 
 export default function ForFarmers() {
   const { user } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', content: '' })
   const [myListings, setMyListings] = useState([])
   const [showListingForm, setShowListingForm] = useState(false)
+  const [userProfile, setUserProfile] = useState(null)
+  const [editingListing, setEditingListing] = useState(null)
+
   const initialFormState = {
     title: '',
     description: '',
@@ -22,8 +27,8 @@ export default function ForFarmers() {
   }
   const [newListing, setNewListing] = useState(initialFormState)
 
-  // Categories for products
-  const categories = [
+  // Memoize the categories and units arrays
+  const categories = useMemo(() => [
     'Vegetables',
     'Fruits',
     'Grains',
@@ -31,10 +36,9 @@ export default function ForFarmers() {
     'Poultry',
     'Livestock',
     'Other'
-  ]
+  ], [])
 
-  // Units for measurement
-  const units = [
+  const units = useMemo(() => [
     'kg',
     'g',
     'ton',
@@ -43,13 +47,35 @@ export default function ForFarmers() {
     'crate',
     'bag',
     'liter'
-  ]
+  ], [])
 
   useEffect(() => {
     if (user) {
-      fetchMyListings()
+      fetchUserProfile()
     }
   }, [user])
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+
+      setUserProfile(profile)
+      if (profile.user_type === 'farmer') {
+        fetchMyListings()
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+      setMessage({ type: 'error', content: 'Error fetching profile' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const clearMessage = useCallback(() => {
     setTimeout(() => {
@@ -113,9 +139,51 @@ export default function ForFarmers() {
     return true
   }
 
+  const handleDelete = async (listingId) => {
+    if (!window.confirm('Are you sure you want to delete this listing?')) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      const { error } = await supabase
+        .from('product_listings')
+        .delete()
+        .eq('id', listingId)
+        .eq('farmer_id', user.id) // Security check
+
+      if (error) throw error
+
+      setMessage({ type: 'success', content: 'Listing deleted successfully!' })
+      clearMessage()
+      fetchMyListings()
+    } catch (error) {
+      console.error('Error:', error)
+      setMessage({ type: 'error', content: error.message })
+      clearMessage()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEdit = (listing) => {
+    setEditingListing(listing)
+    setNewListing({
+      title: listing.title,
+      description: listing.description,
+      category: listing.category,
+      quantity: listing.quantity.toString(),
+      unit: listing.unit,
+      price_per_unit: listing.price_per_unit.toString(),
+      location: listing.location,
+      availability_date: listing.availability_date,
+    })
+    setShowListingForm(true)
+  }
+
   const handleSubmitListing = async (e) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       clearMessage()
       return
@@ -123,22 +191,44 @@ export default function ForFarmers() {
 
     try {
       setFormLoading(true)
-      const { error } = await supabase
-        .from('product_listings')
-        .insert([
-          {
-            ...newListing,
-            farmer_id: user.id,
-            quantity: parseFloat(newListing.quantity),
-            price_per_unit: parseFloat(newListing.price_per_unit)
-          }
-        ])
+      
+      const listingData = {
+        ...newListing,
+        farmer_id: user.id,
+        quantity: parseFloat(newListing.quantity),
+        price_per_unit: parseFloat(newListing.price_per_unit),
+        status: 'available'
+      }
+
+      let error
+      
+      if (editingListing) {
+        // Update existing listing
+        const { error: updateError } = await supabase
+          .from('product_listings')
+          .update(listingData)
+          .eq('id', editingListing.id)
+          .eq('farmer_id', user.id) // Security check
+        error = updateError
+      } else {
+        // Create new listing
+        const { error: insertError } = await supabase
+          .from('product_listings')
+          .insert([listingData])
+        error = insertError
+      }
 
       if (error) throw error
 
-      setMessage({ type: 'success', content: 'Product listed successfully!' })
+      setMessage({ 
+        type: 'success', 
+        content: editingListing 
+          ? 'Listing updated successfully!' 
+          : 'Product listed successfully!' 
+      })
       clearMessage()
       setShowListingForm(false)
+      setEditingListing(null)
       resetForm()
       fetchMyListings()
     } catch (error) {
@@ -152,254 +242,181 @@ export default function ForFarmers() {
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target
-    setNewListing((prev) => ({
+    setNewListing(prev => ({
       ...prev,
       [name]: value
     }))
   }, [])
 
-  const NotLoggedInContent = () => (
-    <div className="hero min-h-[60vh] bg-base-200">
-      <div className="hero-content text-center">
-        <div className="max-w-md">
-          <h1 className="text-5xl font-bold">For Farmers</h1>
-          <p className="py-6">
-            Join MkulimaExpo to list your products and connect directly with buyers.
-            Get better prices and reach more customers.
-          </p>
-          <Link to="/signup" className="btn btn-primary">Get Started</Link>
+  const handleFormClose = () => {
+    setShowListingForm(false)
+    setEditingListing(null)
+  }
+
+  const handleMessageDisplay = (content, type = 'success') => {
+    setMessage({ content, type })
+    setTimeout(() => setMessage({ content: '', type: 'success' }), 5000)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-base-200 py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-center">
+            <div className="loading loading-spinner loading-lg"></div>
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
-  const ListingForm = () => (
-    <div className="bg-base-100 rounded-lg shadow-xl p-6 mb-8">
-      <h2 className="text-2xl font-bold mb-4">New Product Listing</h2>
-      <form onSubmit={handleSubmitListing} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Product Title</span>
-            </label>
-            <input
-              type="text"
-              name="title"
-              className="input input-bordered"
-              value={newListing.title}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Category</span>
-            </label>
-            <select
-              name="category"
-              className="select select-bordered"
-              value={newListing.category}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Select category</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Quantity</span>
-            </label>
-            <input
-              type="number"
-              name="quantity"
-              className="input input-bordered"
-              value={newListing.quantity}
-              onChange={handleInputChange}
-              required
-              min="0.01"
-              step="0.01"
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Unit</span>
-            </label>
-            <select
-              name="unit"
-              className="select select-bordered"
-              value={newListing.unit}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Select unit</option>
-              {units.map(unit => (
-                <option key={unit} value={unit}>{unit}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Price per Unit (KSh)</span>
-            </label>
-            <input
-              type="number"
-              name="price_per_unit"
-              className="input input-bordered"
-              value={newListing.price_per_unit}
-              onChange={handleInputChange}
-              required
-              min="0.01"
-              step="0.01"
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Location</span>
-            </label>
-            <input
-              type="text"
-              name="location"
-              className="input input-bordered"
-              value={newListing.location}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Available From</span>
-            </label>
-            <input
-              type="date"
-              name="availability_date"
-              className="input input-bordered"
-              value={newListing.availability_date}
-              onChange={handleInputChange}
-              required
-              min={new Date().toISOString().split('T')[0]}
-            />
-          </div>
-
-          <div className="form-control md:col-span-2">
-            <label className="label">
-              <span className="label-text">Description</span>
-            </label>
-            <textarea
-              name="description"
-              className="textarea textarea-bordered h-24"
-              value={newListing.description}
-              onChange={handleInputChange}
-              required
-            ></textarea>
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-base-200 py-8">
+        <div className="container mx-auto px-4">
+          <div className="alert alert-warning">
+            <div>
+              <span>Please complete your profile first.</span>
+              <Link to="/profile" className="btn btn-primary btn-sm ml-4">
+                Go to Profile
+              </Link>
+            </div>
           </div>
         </div>
-
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              setShowListingForm(false)
-              resetForm()
-            }}
-            disabled={formLoading}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className={`btn btn-primary ${formLoading ? 'loading' : ''}`}
-            disabled={formLoading}
-          >
-            {formLoading ? 'Posting...' : 'Post Listing'}
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-
-  const LoggedInContent = () => (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Farmer Dashboard</h1>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowListingForm(!showListingForm)}
-          disabled={formLoading}
-        >
-          {showListingForm ? 'Cancel' : '+ New Listing'}
-        </button>
       </div>
+    )
+  }
 
-      {message.content && (
-        <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'} mb-4`}>
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            {message.type === 'error' ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            )}
-          </svg>
-          <span>{message.content}</span>
+  if (userProfile.user_type === 'buyer') {
+    return (
+      <div className="min-h-screen bg-base-200 py-8">
+        <div className="container mx-auto px-4">
+          <div className="alert alert-warning">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <h3 className="font-bold">Access Restricted</h3>
+              <div className="text-sm">This section is only for farmers. Please update your profile type to access farmer features.</div>
+            </div>
+            <Link to="/profile" className="btn btn-sm">Update Profile</Link>
+          </div>
         </div>
-      )}
+      </div>
+    )
+  }
 
-      {showListingForm && <ListingForm />}
+  return (
+    <div className="min-h-screen bg-base-200 py-8">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Farmer Dashboard</h1>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowListingForm(!showListingForm)}
+          >
+            {showListingForm ? 'Cancel' : '+ New Listing'}
+          </button>
+        </div>
 
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold">My Listings</h2>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="loading loading-spinner loading-lg text-primary"></div>
-          </div>
-        ) : myListings.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {myListings.map((listing) => (
-              <div key={listing.id} className="card bg-base-100 shadow-xl">
-                <div className="card-body">
-                  <h3 className="card-title">{listing.title}</h3>
-                  <div className="badge badge-primary">{listing.category}</div>
-                  <p className="text-sm">{listing.description}</p>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xl font-bold">
-                      KSh {listing.price_per_unit}/{listing.unit}
-                    </span>
-                    <span className="badge badge-secondary">
-                      {listing.quantity} {listing.unit} available
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm mt-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {listing.location}
-                  </div>
-                  <div className="card-actions justify-end mt-4">
-                    <button className="btn btn-sm btn-outline">Edit</button>
-                    <button className="btn btn-sm btn-error btn-outline">Delete</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-base-content/70">No listings yet. Create your first listing!</p>
+        {message.content && (
+          <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'} mb-4`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              {message.type === 'error' ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              )}
+            </svg>
+            <span>{message.content}</span>
           </div>
         )}
+
+        {showListingForm && (
+          <ListingForm
+            onClose={handleFormClose}
+            onSuccess={handleMessageDisplay}
+            editingListing={editingListing}
+            userId={user.id}
+            handleSubmitListing={handleSubmitListing}
+            handleInputChange={handleInputChange}
+            newListing={newListing}
+            formLoading={formLoading}
+          />
+        )}
+
+        <div className="space-y-4">
+          {myListings.map(listing => (
+            <div key={listing.id} className="card bg-base-100 shadow-xl">
+              <div className="card-body">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="card-title">{listing.title}</h2>
+                    <p className="text-sm text-gray-500">
+                      Posted on {new Date(listing.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="dropdown dropdown-end">
+                    <label tabIndex={0} className="btn btn-ghost btn-circle">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-5 h-5 stroke-current">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path>
+                      </svg>
+                    </label>
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                      <li>
+                        <button onClick={() => {
+                          setEditingListing(listing)
+                          setShowListingForm(true)
+                        }}>
+                          Edit
+                        </button>
+                      </li>
+                      <li>
+                        <button onClick={() => handleDelete(listing.id)} className="text-error">
+                          Delete
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <p>{listing.description}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  <div>
+                    <span className="text-sm text-gray-500">Category</span>
+                    <p>{listing.category}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Quantity</span>
+                    <p>{listing.quantity} {listing.unit}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Price per Unit</span>
+                    <p>KSh {listing.price_per_unit}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Location</span>
+                    <p>{listing.location}</p>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <span className="text-sm text-gray-500">Available From</span>
+                  <p>{new Date(listing.availability_date).toLocaleDateString()}</p>
+                </div>
+                <div className="mt-2">
+                  <span className={`badge ${listing.status === 'available' ? 'badge-success' : 'badge-warning'}`}>
+                    {listing.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {myListings.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No listings yet. Create your first listing!</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
-
-  return user ? <LoggedInContent /> : <NotLoggedInContent />
 }

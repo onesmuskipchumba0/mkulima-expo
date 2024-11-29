@@ -1,242 +1,281 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../config/supabase'
 
-// Dummy product data
-const products = [
-  {
-    id: 1,
-    name: "Fresh Organic Tomatoes",
-    description: "Locally grown organic tomatoes, perfect for salads and cooking.",
-    price: 120,
-    unit: "kg",
-    category: "Vegetables",
-    location: "Nakuru",
-    farmer: "John Kimani",
-    image: "https://images.unsplash.com/photo-1546470427-e26264b3b9af?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: 2,
-    name: "Premium Arabica Coffee Beans",
-    description: "High-quality Arabica coffee beans from the highlands.",
-    price: 800,
-    unit: "kg",
-    category: "Grains",
-    location: "Nyeri",
-    farmer: "Sarah Wanjiku",
-    image: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: 3,
-    name: "Fresh Milk",
-    description: "Fresh cow milk from grass-fed cows, delivered daily.",
-    price: 65,
-    unit: "liter",
-    category: "Dairy",
-    location: "Eldoret",
-    farmer: "David Kiprop",
-    image: "https://images.unsplash.com/photo-1550583724-b2692b85b150?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: 4,
-    name: "Sweet Mangoes",
-    description: "Ripe and sweet mangoes, perfect for juice or eating fresh.",
-    price: 150,
-    unit: "dozen",
-    category: "Fruits",
-    location: "Mombasa",
-    farmer: "Ali Hassan",
-    image: "https://images.unsplash.com/photo-1553279768-865429fa0078?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: 5,
-    name: "Fresh Green Peas",
-    description: "Freshly harvested green peas, perfect for cooking.",
-    price: 200,
-    unit: "kg",
-    category: "Vegetables",
-    location: "Nakuru",
-    farmer: "Mary Njeri",
-    image: "https://images.unsplash.com/photo-1587735243615-c03f25aaff15?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: 6,
-    name: "Fresh Eggs",
-    description: "Farm fresh eggs from free-range chickens.",
-    price: 450,
-    unit: "tray",
-    category: "Poultry",
-    location: "Kisumu",
-    farmer: "Jane Adhiambo",
-    image: "https://images.unsplash.com/photo-1569288052389-dac9b0ac9efd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: 7,
-    name: "Organic Honey",
-    description: "Pure, organic honey from local beekeepers.",
-    price: 750,
-    unit: "kg",
-    category: "Other",
-    location: "Kitui",
-    farmer: "Peter Mutua",
-    image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: 8,
-    name: "Fresh Carrots",
-    description: "Organic carrots, freshly harvested.",
-    price: 80,
-    unit: "kg",
-    category: "Vegetables",
-    location: "Nanyuki",
-    farmer: "James Mwangi",
-    image: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
+export default function Marketplace() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState([])
+  const [filters, setFilters] = useState({
+    category: '',
+    minPrice: '',
+    maxPrice: '',
+    location: '',
+  })
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const categories = [
+    'All',
+    'Vegetables',
+    'Fruits',
+    'Grains',
+    'Dairy',
+    'Poultry',
+    'Livestock',
+    'Other'
+  ]
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  async function fetchProducts() {
+    try {
+      setLoading(true)
+      let query = supabase
+        .from('product_listings')
+        .select(`
+          *,
+          profiles:farmer_id (
+            full_name,
+            phone_number,
+            location
+          )
+        `)
+        .eq('status', 'available')
+        .order('created_at', { ascending: false })
+
+      // Apply filters
+      if (filters.category && filters.category !== 'All') {
+        query = query.eq('category', filters.category)
+      }
+      if (filters.minPrice) {
+        query = query.gte('price_per_unit', parseFloat(filters.minPrice))
+      }
+      if (filters.maxPrice) {
+        query = query.lte('price_per_unit', parseFloat(filters.maxPrice))
+      }
+      if (filters.location) {
+        query = query.ilike('location', `%${filters.location}%`)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      // Apply search filter on the client side
+      let filteredData = data
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase()
+        filteredData = data.filter(product =>
+          product.title.toLowerCase().includes(searchLower) ||
+          product.description.toLowerCase().includes(searchLower) ||
+          product.location.toLowerCase().includes(searchLower)
+        )
+      }
+
+      setProducts(filteredData || [])
+    } catch (error) {
+      console.error('Error:', error)
+    } finally {
+      setLoading(false)
+    }
   }
-]
 
-const categories = ["All", "Vegetables", "Fruits", "Grains", "Dairy", "Poultry", "Other"]
-const locations = ["All", "Nakuru", "Nyeri", "Eldoret", "Mombasa", "Kisumu", "Kitui", "Nanyuki"]
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
 
-function Marketplace() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All")
-  const [selectedLocation, setSelectedLocation] = useState("All")
+  const applyFilters = () => {
+    fetchProducts()
+  }
 
-  // Filter products based on search query, category, and location
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      const matchesSearch = 
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.farmer.toLowerCase().includes(searchQuery.toLowerCase())
-      
-      const matchesCategory = 
-        selectedCategory === "All" || product.category === selectedCategory
-      
-      const matchesLocation = 
-        selectedLocation === "All" || product.location === selectedLocation
-
-      return matchesSearch && matchesCategory && matchesLocation
+  const resetFilters = () => {
+    setFilters({
+      category: '',
+      minPrice: '',
+      maxPrice: '',
+      location: '',
     })
-  }, [searchQuery, selectedCategory, selectedLocation])
+    setSearchTerm('')
+    fetchProducts()
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
 
   return (
-    <div className="min-h-screen bg-base-100">
-      {/* Hero Section */}
-      <div className="hero min-h-[40vh] bg-primary text-primary-content">
-        <div className="hero-content text-center">
-          <div className="max-w-md">
-            <h1 className="text-5xl font-bold">Agricultural Marketplace</h1>
-            <p className="py-6">Discover fresh produce directly from farmers across the country.</p>
+    <div className="min-h-screen bg-base-200 py-8">
+      <div className="container mx-auto px-4">
+        {/* Search and Filters */}
+        <div className="bg-base-100 rounded-lg shadow-xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search products..."
+                className="input input-bordered w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button 
+                className="btn btn-primary" 
+                onClick={applyFilters}
+                disabled={loading}
+              >
+                Apply Filters
+              </button>
+              <button 
+                className="btn btn-ghost" 
+                onClick={resetFilters}
+                disabled={loading}
+              >
+                Reset
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Search and Filter Section */}
-      <div className="p-4 bg-base-200 sticky top-16 z-40">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4">
-          <div className="form-control flex-1">
-            <div className="input-group">
-              <input 
-                type="text" 
-                placeholder="Search products, descriptions, or farmers..." 
-                className="input input-bordered w-full" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Category</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                name="category"
+                value={filters.category}
+                onChange={handleFilterChange}
+              >
+                <option value="">All Categories</option>
+                {categories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Min Price (KSh)</span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                name="minPrice"
+                value={filters.minPrice}
+                onChange={handleFilterChange}
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Max Price (KSh)</span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered w-full"
+                name="maxPrice"
+                value={filters.maxPrice}
+                onChange={handleFilterChange}
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Location</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered w-full"
+                name="location"
+                value={filters.location}
+                onChange={handleFilterChange}
+                placeholder="Enter location..."
               />
             </div>
           </div>
-          <select 
-            className="select select-bordered w-full md:w-48"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-          >
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-          <select 
-            className="select select-bordered w-full md:w-48"
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-          >
-            {locations.map(location => (
-              <option key={location} value={location}>{location}</option>
-            ))}
-          </select>
         </div>
-      </div>
 
-      {/* Products Grid */}
-      <div className="p-4">
-        <div className="max-w-7xl mx-auto">
-          {/* Results count */}
-          <div className="text-sm breadcrumbs mb-4">
-            <ul>
-              <li>Showing {filteredProducts.length} products</li>
-              {searchQuery && <li>Search: "{searchQuery}"</li>}
-              {selectedCategory !== "All" && <li>Category: {selectedCategory}</li>}
-              {selectedLocation !== "All" && <li>Location: {selectedLocation}</li>}
-            </ul>
+        {/* Products Grid */}
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="loading loading-spinner loading-lg text-primary"></div>
           </div>
-
-          {/* Products grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
-                <figure className="relative h-48">
-                  <img 
-                    src={product.image} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2 badge badge-primary">{product.category}</div>
-                </figure>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map((product) => (
+              <div key={product.id} className="card bg-base-100 shadow-xl">
                 <div className="card-body">
-                  <h2 className="card-title">
-                    {product.name}
-                  </h2>
-                  <p className="text-sm">{product.description}</p>
-                  <div className="flex items-center gap-2 text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {product.location}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    {product.farmer}
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xl font-bold text-primary">
-                      KSh {product.price}
-                      <span className="text-sm font-normal text-base-content/70">/{product.unit}</span>
+                  <h2 className="card-title">{product.title}</h2>
+                  <div className="badge badge-primary">{product.category}</div>
+                  <p className="text-sm mt-2">{product.description}</p>
+                  
+                  <div className="flex justify-between items-center mt-4">
+                    <span className="text-xl font-bold">
+                      KSh {product.price_per_unit}/{product.unit}
                     </span>
-                    <div className="badge badge-secondary">In Stock</div>
+                    <span className="badge badge-secondary">
+                      {product.quantity} {product.unit} available
+                    </span>
                   </div>
-                  <div className="card-actions justify-end mt-2">
-                    <button className="btn btn-primary">View Details</button>
+
+                  <div className="divider"></div>
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {product.location}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Available from: {formatDate(product.availability_date)}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Seller: {product.profiles.full_name}
+                    </div>
+
+                    {user && user.id !== product.farmer_id && (
+                      <div className="card-actions justify-end mt-4">
+                        <button className="btn btn-primary btn-block">
+                          Contact Seller
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* No results message */}
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">🔍</div>
-              <h3 className="text-2xl font-bold mb-2">No products found</h3>
-              <p className="text-base-content/70">
-                Try adjusting your search or filters to find what you're looking for
-              </p>
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-base-content/70">No products found matching your criteria.</p>
+          </div>
+        )}
       </div>
     </div>
   )
 }
-
-export default Marketplace
