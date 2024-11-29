@@ -383,13 +383,8 @@ export default function Marketplace() {
                   </div>
 
                   {user ? (
-                    <div className="card-actions justify-end mt-4 gap-2">
-                      <Link
-                        to={`/marketplace/${listing.id}`}
-                        className="btn btn-secondary gap-2"
-                      >
-                        View Details
-                      </Link>
+                    <div className="card-actions justify-center mt-4 gap-2">
+           
                       <a
                         href={`tel:${listing.profiles?.phone_number}`}
                         className="btn btn-primary gap-2"
@@ -411,7 +406,14 @@ export default function Marketplace() {
                           </svg>
                           WhatsApp
                         </a>
+                        
                       )}
+                          <Link
+                        to={`/marketplace/${listing.id}`}
+                        className="btn btn-secondary gap-2"
+                      >
+                        View Details
+                      </Link>
                     </div>
                   ) : (
                     <div className="card-actions justify-end mt-4">
