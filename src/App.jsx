@@ -13,6 +13,7 @@ import ProductDetails from './pages/ProductDetails'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import Pricing from './pages/Pricing'
+import { Analytics } from '@vercel/analytics/react'
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
           <Footer />
         </div>
       </Router>
+      <Analytics />
     </AuthProvider>
   )
 }
